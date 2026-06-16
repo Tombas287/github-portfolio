@@ -11,6 +11,12 @@ on:
           - dev
           - prod
 
+
+permissions:
+  contents: write
+  pages: write
+  packages: read
+
 jobs:
   build:
     name: Build
