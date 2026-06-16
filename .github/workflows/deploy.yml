@@ -1,0 +1,87 @@
+name: Deploy Portfolio
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select deployment target'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  deploy-dev:
+    name: Deploy to Dev
+    needs: build
+    if: ${{ github.event.inputs.environment == 'dev' }}
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Deploy to GitHub Pages (dev branch)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages-dev
+          commit_message: 'deploy: dev preview [${{ github.sha }}]'
+
+      - name: Print dev URL
+        run: echo "Dev preview deployed to https://Tombas287.github.io/github-portfolio (gh-pages-dev branch)"
+
+  deploy-prod:
+    name: Deploy to Prod
+    needs: build
+    if: ${{ github.event.inputs.environment == 'prod' }}
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Deploy to GitHub Pages (prod)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          commit_message: 'deploy: production [${{ github.sha }}]'
+
+      - name: Print prod URL
+        run: echo "Production deployed to https://Tombas287.github.io/github-portfolio"
